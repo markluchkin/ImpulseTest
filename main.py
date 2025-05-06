@@ -109,7 +109,7 @@ class UMLModel:
         try:
             rough_string = ET.tostring(root_element)
             reparsed_string = minidom.parseString(rough_string)
-            result_xml = reparsed_string.toprettyxml(indent="\t")
+            result_xml = reparsed_string.toprettyxml(indent="    ")
         except Exception as e:
             raise ValueError(f"XML generation error: {e}")
 
