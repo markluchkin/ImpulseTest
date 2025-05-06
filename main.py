@@ -1,6 +1,6 @@
 import xml.etree.ElementTree as ET
-import xml.dom.minidom
 import json
+from xml.dom import minidom
 
 
 class UMLClass:
@@ -21,15 +21,6 @@ class Aggregation:
         self.target = target
         self.source_multiplicity = source_multiplicity
         self.target_multiplicity = target_multiplicity
-
-
-    def to_dict(self):
-        return {
-            "source": self.source,
-            "target": self.target,
-            "sourceMultiplicity": self.source_multiplicity,
-            "targetMultiplicity": self.target_multiplicity 
-        }
 
 
     def parse_multiplicity(self, multiplicity):
@@ -80,7 +71,34 @@ class UMLModel:
 
 
     def generate_config_xml(self, filename):
-        ...
+        root_class = next((cls for cls in self.classes.values() if cls.is_root), None)
+        if not root_class:
+            raise ValueError("Не найден корневой класс (is_root=True)")
+        
+        def build_xml_element(class_name):
+            uml_class = self.classes[class_name]
+            element = ET.Element(uml_class.name)
+
+            for attr in uml_class.attributes:
+                attr_element = ET.SubElement(element, attr["name"])
+                attr_element.text = attr["type"]
+                #print(f"Added attribute: {attr['name']}")
+
+            for aggr in self.aggregations:
+                if aggr.target == class_name:
+                    child_element = build_xml_element(aggr.source)
+                    element.append(child_element)
+
+            return element
+        
+        root_element = build_xml_element(root_class.name)
+
+        rough_string = ET.tostring(root_element, "unicode")
+        reparsed = minidom.parseString(rough_string)
+        result_xml = reparsed.toprettyxml(indent="    ")
+
+        with open(filename, "w") as file:
+            file.write(result_xml)
 
             
     def generate_meta_json(self, filename):
@@ -122,8 +140,8 @@ class UMLModel:
         
 if __name__ == "__main__":
     input_file = "test_input.xml" 
-    output_config_xml_file = "config.xml"
-    output_meta_json_file = "meta.json"
+    output_config_xml_file = "./out/config.xml"
+    output_meta_json_file = "./out/meta.json"
 
     model = UMLModel()
     model.load_from_xml(input_file)
